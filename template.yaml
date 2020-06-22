@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Sample TypeScript Serverless Testing App
+
+Globals:
+  Function:
+    Timeout: 900
+    Runtime: nodejs12.x
+    Tracing: Active
+    MemorySize: 512
+
+Parameters:
+  InputBucketName:
+    Type: String
+    Description: The name of the Amazon S3 bucket that will store CSV files
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref InputBucketName
+
+  ParseCovidCSV:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: build/parse-covid-csv
+      Handler: lambda.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CovidCases
+        - S3ReadPolicy:
+            BucketName: !Ref InputBucketName
+      Events:
+        FileUpload:
+          Type: S3
+          Properties:
+            Bucket: !Ref S3Bucket
+            Events: s3:ObjectCreated:*
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref CovidCases
+          BUCKET_NAME: !Ref InputBucketName
+
+  CovidCases:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: covid19-cases
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: True
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+
+Outputs:
+  InputBucketName:
+    Description: The name of the Amazon S3 bucket that will store CSV files
+    Value: !Ref InputBucketName
+
+  DBTable:
+    Description: The name of the DynamoDB table
+    Value: !Ref CovidCases
