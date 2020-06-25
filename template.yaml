@@ -25,17 +25,17 @@ Resources:
     Properties:
       CodeUri: build/parse-covid-csv
       Handler: lambda.handler
+      Events:
+        CsvUpload:
+          Type: S3
+          Properties:
+            Bucket: !Ref S3Bucket
+            Events: s3:ObjectCreated:*
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CovidCases
         - S3ReadPolicy:
             BucketName: !Ref InputBucketName
-      Events:
-        FileUpload:
-          Type: S3
-          Properties:
-            Bucket: !Ref S3Bucket
-            Events: s3:ObjectCreated:*
       Environment:
         Variables:
           TABLE_NAME: !Ref CovidCases
@@ -44,7 +44,6 @@ Resources:
   CovidCases:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: covid19-cases
       AttributeDefinitions:
       - AttributeName: id
         AttributeType: S

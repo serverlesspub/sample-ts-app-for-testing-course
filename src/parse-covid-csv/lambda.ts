@@ -1,51 +1,32 @@
 // Allow CloudWatch to read source maps
 import 'source-map-support/register'
-import { DocumentClient } from 'aws-sdk/clients/dynamodb'
-import { S3Event, S3EventRecord } from 'aws-lambda'
-import S3 from 'aws-sdk/clients/s3'
-import path from 'path'
-import os from 'os'
-import util from 'util'
-import * as stream from 'stream'
-import * as fs from 'fs'
-import neatCsv from 'neat-csv'
-import { v4 as uuidv4 } from 'uuid'
-const pipeline = util.promisify(stream.pipeline)
-const TABLE_NAME = process.env.TABLE_NAME || ''
-const documentClient = new DocumentClient()
-const s3 = new S3()
-export async function handler(event: S3Event): Promise<any> {
-  const s3Records = event.Records
-  await Promise.all(s3Records.map(async (record: S3EventRecord) => processCSV(record)))
+import AWSXRay from 'aws-xray-sdk-core'
+import { S3Event } from 'aws-lambda'
+import https from 'https'
+
+// Instead of keeping all of our logic in one file,
+// it is much easier to handle the logic by storing it the /src folder
+import processCSV from './src/main'
+
+if (process.env.AWS_EXECUTION_ENV) {
+  AWSXRay.captureHTTPsGlobal(https, true)
 }
-async function processCSV(record: S3EventRecord): Promise<any> {
-  const downloadPath = path.join(os.tmpdir(), record.s3.object.key)
-  try {
-    const readable = s3.getObject({
-      Bucket: record.s3.bucket.name,
-      Key: record.s3.object.key,
-    }).createReadStream()
-    const writable = fs.createWriteStream(downloadPath, { encoding: 'utf8' })
-    await pipeline(
-      readable,
-      writable
-    )
-  } catch (e) {
-    console.log(e)
-    throw e
-  }
-  const readCsv = fs.createReadStream(downloadPath)
-  const jsonData = await neatCsv(readCsv)
-  await Promise.all(jsonData.map(async (entry: any) => {
-    entry.id = uuidv4()
-    try {
-      return await documentClient.put({
-        TableName: TABLE_NAME,
-        Item: entry,
-      }).promise()
-    } catch (e) {
-      console.error(e)
-      throw e
-    }
-  }))
+
+// Here we are introducing a File Event Port, per Hexagonal architecture principles
+import parseFileEvent from './src/parse-file-event'
+
+// Since we are going to reference a File structure, { key, bucket }, quite a lot,
+// it is much better to define a proper interface than to rely on "any" a type
+import IFile from './src/IFile'
+
+const TABLE_NAME = process.env.TABLE_NAME || ''
+
+export async function handler(event: S3Event): Promise<any> {
+
+  // With it we are parsing an external event to a format more suitable for our business logic
+  const receivedFiles: IFile[] = parseFileEvent(event)
+
+  // Simply, we are going through all event Files,
+  // and passing them to our main business logic for processing
+  return await Promise.all(receivedFiles.map(async (file: IFile) => processCSV(file, TABLE_NAME)))
 }
