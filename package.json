@@ -7,7 +7,7 @@
     "watch": "NODE_ENV=dev webpack --watch --mode=development",
     "build": "NODE_ENV=prod BUNDLE_ANALYZER=false webpack --mode=production --progress",
     "build-analyze": "NODE_ENV=prod BUNDLE_ANALYZER=true webpack --mode=production --progress",
-    "lint": "eslint -c .eslintrc.js --ext ts  functions",
+    "lint": "eslint -c .eslintrc.js --ext ts src",
     "pretest": "npm run lint",
     "test": "jest",
     "coverage": "jest --coverage"

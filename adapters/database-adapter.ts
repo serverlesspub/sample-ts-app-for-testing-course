@@ -11,14 +11,10 @@ export default {
   saveItem: async function saveItem(item: any, tableName: string, db = documentClient): Promise<void> {
     // 2. We generate the item ID
     item.id = uuidv4()
-    try {
-      // 3. Try to store the file into our current database
-      await db.put({
-        TableName: tableName,
-        Item: item
-      }).promise()
-    } catch(e) {
-      throw JSON.stringify({message: `Error saving ${JSON.stringify(e)}` })
-    }
-  }
+    // 3. Try to store the file into our current database
+    await db.put({
+      TableName: tableName,
+      Item: item,
+    }).promise()
+  },
 }
