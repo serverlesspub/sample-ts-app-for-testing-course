@@ -20,7 +20,7 @@
     "@types/node": "^13.9.1",
     "@types/uuid": "^8.0.0",
     "aws-lambda": "^1.0.5",
-    "aws-sdk": "^2.639.0",
+    "aws-sdk": "^2.814.0",
     "aws-xray-sdk": "^2.5.0",
     "neat-csv": "^5.2.0",
     "source-map-support": "^0.5.16",
